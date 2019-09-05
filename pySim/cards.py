@@ -145,6 +145,97 @@ class Card(object):
 		return sw
 
 
+class _GenericSimBase(Card):
+        """
+        A comfortable wrapper for the Card class. This class provides methods
+        that just accept just the parameter array. All further decisions,
+        parameter checking, status word checking are then done in this class.
+        """
+
+	def __check_sw(self, par, sw):
+		if sw != '9000':
+			print("Programming %s failed with code %s" % (par, sw))
+			return False
+		return True
+
+	# Safely get a parameter from the parameter array. Ensure that it
+	# exists and that it is not empty. Also ensure that it is always
+	# a string so that we know what we are working with.
+	def __get_p(self, p, p_name):
+		p_val = p.get(p_name, None)
+		if p_val == None:
+			return None
+		return str(p_val).strip()
+
+	def __get_mcc_mnc(self, p):
+		mcc = self.__get_p(p, 'mcc')
+		mnc = self.__get_p(p, 'mnc')
+
+		# If MCC is missing, try to obtain it from the IMSI
+		if mcc == None:
+			imsi = self.__get_p(p, 'imsi')
+			if imsi == None:
+				return (None, None)
+			mcc = mcc_from_imsi(imsi)
+
+		# If MNC is missing, try to obtain it from the IMSI
+		if mnc == None:
+			imsi = self.__get_p(p, 'imsi')
+			if imsi == None:
+				return (None, None)
+			mnc = mnc_from_imsi(imsi)
+		return mcc, mnc
+
+	def p_update_imsi(self, p):
+		imsi = self.__get_p(p, 'imsi')
+		if imsi != None:
+			sw = self.update_imsi(imsi)
+			return self.__check_sw('imsi',sw)
+		return False
+
+	def p_update_plmnsel(self, p):
+		mcc, mnc = self.__get_mcc_mnc(p);
+		if mcc and mnc:
+			sw = self.update_plmnsel(int(mcc), int(mnc))
+			return self.__check_sw('PLMNsel',sw)
+		return False
+
+	def p_update_hplmn_act(self, p):
+		mcc, mnc = self.__get_mcc_mnc(p);
+		if mcc and mnc:
+			sw = self.update_hplmn_act(int(mcc), int(mnc))
+			return self.__check_sw('HPLMNwAcT',sw)
+		return False
+
+	def p_update_oplmn_act(self, p):
+		mcc, mnc = self.__get_mcc_mnc(p);
+		if mcc and mnc:
+			sw = self.update_oplmn_act(int(mcc), int(mnc))
+			return self.__check_sw('OPLMNwAcT',sw)
+		return False
+
+	def p_update_plmn_act(self, p):
+		mcc, mnc = self.__get_mcc_mnc(p);
+		if mcc and mnc:
+			sw = self.update_plmn_act(int(mcc), int(mnc))
+			return self.__check_sw('PLMNwAcT',sw)
+		return False
+
+	def p_update_ad(self, p):
+		mcc, mnc = self.__get_mcc_mnc(p);
+		if mcc and mnc:
+			sw = self.update_ad(int(mnc))
+			return self.__check_sw('AD',sw)
+		return False
+
+	def p_update_smsp(self, p):
+		smsp = self.__get_p(p, 'smsp')
+		if smsp:
+			sw = self.update_smsp(smsp)
+			return self.__check_sw('SMSP',sw)
+		return False
+
+
 class _MagicSimBase(Card):
 	"""
 	Theses cards uses several record based EFs to store the provider infos,
@@ -200,7 +291,7 @@ class _MagicSimBase(Card):
 		self._scc.select_file(['3f00', '7f4d'])
 
 		# Home PLMN in PLMN_Sel format
-		hplmn = enc_plmn(p['mcc'], p['mnc'])
+		hplmn = enc_plmn(int(p['mcc']), int(p['mnc']))
 
 		# Operator name ( 3f00/7f4d/8f0c )
 		self._scc.update_record(self._files['name'][0], 2,
@@ -244,7 +335,7 @@ class _MagicSimBase(Card):
 		r = self._scc.select_file(['3f00', '7f20', '6f30'])
 		tl = int(r[-1][4:8], 16)
 
-		hplmn = enc_plmn(p['mcc'], p['mnc'])
+		hplmn = enc_plmn(int(p['mcc']), int(p['mnc']))
 		self._scc.update_binary('6f30', hplmn + 'ff' * (tl-3))
 
 	def erase(self):
@@ -330,7 +421,7 @@ class FakeMagicSim(Card):
 		r = self._scc.select_file(['3f00', '7f20', '6f30'])
 		tl = int(r[-1][4:8], 16)
 
-		hplmn = enc_plmn(p['mcc'], p['mnc'])
+		hplmn = enc_plmn(int(p['mcc']), int(p['mnc']))
 		self._scc.update_binary('6f30', hplmn + 'ff' * (tl-3))
 
 		# Get total number of entries and entry size
@@ -405,7 +496,7 @@ class GrcardSim(Card):
 		# EF.HPLMN
 		r = self._scc.select_file(['3f00', '7f20', '6f30'])
 		size = int(r[-1][4:8], 16)
-		hplmn = enc_plmn(p['mcc'], p['mnc'])
+		hplmn = enc_plmn(int(p['mcc']), int(p['mnc']))
 		self._scc.update_binary('6f30', hplmn + 'ff' * (size-3))
 
 		# EF.SPN (Service Provider Name)
@@ -523,7 +614,7 @@ class SysmoSIMgr2(Card):
 		# get size and write EF.HPLMN
 		r = self._scc.select_file(['6f30'])
 		size = int(r[-1][4:8], 16)
-		hplmn = enc_plmn(p['mcc'], p['mnc'])
+		hplmn = enc_plmn(int(p['mcc']), int(p['mnc']))
 		self._scc.update_binary('6f30', hplmn + 'ff' * (size-3))
 
 		# set COMP128 version 0 in proprietary file
@@ -542,7 +633,7 @@ class SysmoSIMgr2(Card):
 	def erase(self):
 		return
 
-class SysmoUSIMSJS1(Card):
+class SysmoUSIMSJS1(_GenericSimBase):
 	"""
 	sysmocom sysmoUSIM-SJS1
 	"""
@@ -589,33 +680,21 @@ class SysmoUSIMSJS1(Card):
 			data, sw = self._scc.update_binary('00F7', content)
 
 		# write EF.IMSI
-		data, sw = self._scc.update_binary('6f07', enc_imsi(p['imsi']))
+                self.p_update_imsi(p)
 
 		# EF.PLMNsel
-                if p.get('mcc') and p.get('mnc'):
-                        sw = self.update_plmnsel(p['mcc'], p['mnc'])
-                        if sw != '9000':
-				print("Programming PLMNsel failed with code %s"%sw)
+                self.p_update_plmnsel(p)
 
                 # EF.PLMNwAcT
-                if p.get('mcc') and p.get('mnc'):
-			sw = self.update_plmn_act(p['mcc'], p['mnc'])
-			if sw != '9000':
-				print("Programming PLMNwAcT failed with code %s"%sw)
+                self.p_update_plmn_act(p)
 
                 # EF.OPLMNwAcT
-                if p.get('mcc') and p.get('mnc'):
-			sw = self.update_oplmn_act(p['mcc'], p['mnc'])
-			if sw != '9000':
-				print("Programming OPLMNwAcT failed with code %s"%sw)
+                self.p_update_oplmn_act(p)
 
                 # EF.AD
-                if p.get('mcc') and p.get('mnc'):
-			sw = self.update_ad(p['mnc'])
-			if sw != '9000':
-				print("Programming AD failed with code %s"%sw)
+		self.p_update_ad(p)
 
-		# EF.SMSP
+		# EF.SMSP (propritary method?, why different than the others?)
 		if p.get('smsp'):
 			r = self._scc.select_file(['3f00', '7f10'])
 			data, sw = self._scc.update_record('6f42', 1, lpad(p['smsp'], 104), force_len=True)
@@ -744,7 +823,7 @@ class FairwavesSIM(Card):
 				print("Programming SMSP failed with code %s"%sw)
 		# This SIM doesn't support changing ICCID
 		if p.get('mcc') is not None and p.get('mnc') is not None:
-			sw = self.update_hplmn_act(p['mcc'], p['mnc'])
+			sw = self.update_hplmn_act(int(p['mcc']), int(p['mnc']))
 			if sw != '9000':
 				print("Programming MCC/MNC failed with code %s"%sw)
 		if p.get('imsi') is not None:
@@ -842,6 +921,7 @@ class WavemobileSim(Card):
 		return None
 
 	def program(self, p):
+
 		if not p['pin_adm']:
 			raise ValueError("Please provide a PIN-ADM as there is no default one")
 		sw = self.verify_adm(h2b(p['pin_adm']))
@@ -883,25 +963,25 @@ class WavemobileSim(Card):
 
 		# EF.PLMNsel
                 if p.get('mcc') and p.get('mnc'):
-                        sw = self.update_plmnsel(p['mcc'], p['mnc'])
+                        sw = self.update_plmnsel(int(p['mcc']), int(p['mnc']))
                         if sw != '9000':
 				print("Programming PLMNsel failed with code %s"%sw)
 
                 # EF.PLMNwAcT
                 if p.get('mcc') and p.get('mnc'):
-			sw = self.update_plmn_act(p['mcc'], p['mnc'])
+			sw = self.update_plmn_act(int(p['mcc']), int(p['mnc']))
 			if sw != '9000':
 				print("Programming PLMNwAcT failed with code %s"%sw)
 
                 # EF.OPLMNwAcT
                 if p.get('mcc') and p.get('mnc'):
-			sw = self.update_oplmn_act(p['mcc'], p['mnc'])
+			sw = self.update_oplmn_act(int(p['mcc']), int(p['mnc']))
 			if sw != '9000':
 				print("Programming OPLMNwAcT failed with code %s"%sw)
 
                 # EF.AD
                 if p.get('mcc') and p.get('mnc'):
-			sw = self.update_ad(p['mnc'])
+			sw = self.update_ad(int(p['mnc']))
 			if sw != '9000':
 				print("Programming AD failed with code %s"%sw)
 

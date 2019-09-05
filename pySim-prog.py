@@ -43,6 +43,7 @@ from pySim.cards import _cards_classes
 from pySim.utils import h2b, swap_nibbles, rpad, derive_milenage_opc, calculate_luhn, dec_iccid
 from pySim.ts_51_011 import EF
 from pySim.card_handler import *
+from pySim.utils import *
 
 def parse_options():
 
@@ -432,7 +433,7 @@ def print_parameters(params):
 	if 'smsp' in params:
 		s.append(" > SMSP     : %(smsp)s")
 	s.append(" > ICCID    : %(iccid)s")
-	s.append(" > MCC/MNC  : %(mcc)d/%(mnc)d")
+	s.append(" > MCC/MNC  : %(mcc)s/%(mnc)s")
 	s.append(" > IMSI     : %(imsi)s")
 	s.append(" > Ki       : %(ki)s")
 	s.append(" > OPC      : %(opc)s")
@@ -456,6 +457,10 @@ def _read_params_csv(opts, iccid=None, imsi=None):
 	import csv
 	f = open(opts.read_csv, 'r')
 	cr = csv.DictReader(f)
+
+        # Lower-case fieldnames
+        cr.fieldnames = [ field.lower() for field in cr.fieldnames ]
+
 	i = 0
         if not 'iccid' in cr.fieldnames:
             raise Exception("CSV file in wrong format!")
@@ -479,8 +484,9 @@ def _read_params_csv(opts, iccid=None, imsi=None):
 def read_params_csv(opts, imsi=None, iccid=None):
 	row = _read_params_csv(opts, iccid=iccid, imsi=imsi)
 	if row is not None:
-		row['mcc'] = int(row.get('mcc', row['imsi'][0:3]))
-		row['mnc'] = int(row.get('mnc', row['imsi'][3:5]))
+		row['mcc'] = row.get('mcc', mcc_from_imsi(row.get('imsi')))
+		row['mnc'] = row.get('mnc', mnc_from_imsi(row.get('imsi')))
+
 		pin_adm = None
 		# We need to escape the pin_adm we get from the csv
 		if 'pin_adm' in row:
