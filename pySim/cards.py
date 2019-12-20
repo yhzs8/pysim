@@ -144,6 +144,30 @@ class Card(object):
 		data, sw = self._scc.update_binary(EF['SPN'], rpad(content, 32))
 		return sw
 
+	# Read the (full) AID for either ISIM or USIM application
+	def read_aid(self, isim = False):
+
+		# First (known) halves of the AID
+		aid_usim = "a0000000871002"
+		aid_isim = "a0000000871004"
+
+		# Select which one to look for
+		if isim:
+			aid = aid_isim
+		else:
+			aid = aid_usim
+
+		# Find out how many records the EF.DIR has, then go through
+		# all records and try to find the AID we are looking for
+		aid_record_count = self._scc.record_count(['2F00'])
+		for i in range(0, aid_record_count):
+			record = self._scc.read_record(['2F00'], i + 1)
+			if aid in record[0]:
+				aid_len = int(record[0][6:8], 16)
+				return record[0][8:8 + aid_len * 2]
+
+		return None
+
 
 class _MagicSimBase(Card):
 	"""
@@ -911,10 +935,162 @@ class WavemobileSim(Card):
 		return
 
 
+
+
+
+
+
+
+
+
+
+class SysmoISIMSJA2(Card):
+	"""
+	sysmocom sysmoISIM-SJA2
+	"""
+
+	name = 'sysmoISIM-SJA2'
+
+	def __init__(self, ssc):
+		super(SysmoISIMSJA2, self).__init__(ssc)
+		self._scc.cla_byte = "00"
+		self._scc.sel_ctrl = "0004" #request an FCP
+
+	@classmethod
+	def autodetect(kls, scc):
+		try:
+			# Try card model #1
+			atr = "3B 9F 96 80 1F 87 80 31 E0 73 FE 21 1B 67 4A 4C 75 30 34 05 4B A9"
+			if scc.get_atr() == toBytes(atr):
+				return kls(scc)
+
+			# Try card model #2
+			atr = "3B 9F 96 80 1F 87 80 31 E0 73 FE 21 1B 67 4A 4C 75 31 33 02 51 B2"
+			if scc.get_atr() == toBytes(atr):
+				return kls(scc)
+		except:
+			return None
+		return None
+
+
+
+
+
+
+
+
+		
+		
+	def program(self, p):
+		print "=================================================="
+
+		# authenticate as ADM using default key (written on the card..)
+		if not p['pin_adm']:
+			raise ValueError("Please provide a PIN-ADM as there is no default one")
+		self._scc.verify_chv(0x0A, h2b(p['pin_adm']))
+
+		if p.get('iccid'):
+			print("Warning: Programming of the ICCID is not implemented for this type of card.")
+
+
+			
+		
+		# select MF
+		r = self._scc.select_file(['3f00'])
+
+		print "==================== ADF.ISIM ======================="
+		r = self._scc.select_file(['3f00'])
+		aid = self.read_aid(isim = True)
+		r = self._scc.select_adf(aid)
+		print r
+
+
+		
+
+		print "==================== ADF.USIM ======================="
+		r = self._scc.select_file(['3f00'])
+		aid = self.read_aid()
+		r = self._scc.select_adf(aid)
+		print r
+
+
+
+
+		print "====================================================="
+		
+
+
+		# select DF_SYSTEM
+		r = self._scc.select_file(['3f00'])
+		r = self._scc.select_file(['A515'])
+		data, sw = self._scc.update_binary('6F20', p['ki'], 1)
+
+
+
+
+
+		# select DF_GSM
+		r = self._scc.select_file(['7f20'])
+
+		# write EF.IMSI
+		data, sw = self._scc.update_binary('6f07', enc_imsi(p['imsi']))
+
+		# EF.PLMNsel
+		if p.get('mcc') and p.get('mnc'):
+			sw = self.update_plmnsel(p['mcc'], p['mnc'])
+			if sw != '9000':
+				print("Programming PLMNsel failed with code %s"%sw)
+
+		# EF.PLMNwAcT
+		if p.get('mcc') and p.get('mnc'):
+			sw = self.update_plmn_act(p['mcc'], p['mnc'])
+			if sw != '9000':
+				print("Programming PLMNwAcT failed with code %s"%sw)
+
+		# EF.OPLMNwAcT
+		if p.get('mcc') and p.get('mnc'):
+			sw = self.update_oplmn_act(p['mcc'], p['mnc'])
+			if sw != '9000':
+				print("Programming OPLMNwAcT failed with code %s"%sw)
+
+		# EF.AD
+		if p.get('mcc') and p.get('mnc'):
+			sw = self.update_ad(p['mnc'])
+			if sw != '9000':
+				print("Programming AD failed with code %s"%sw)
+
+		# EF.SMSP
+		if p.get('smsp'):
+			r = self._scc.select_file(['3f00', '7f10'])
+			data, sw = self._scc.update_record('6f42', 1, lpad(p['smsp'], 104), force_len=True)
+		
+		return
+
+	def erase(self):
+		return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # In order for autodetection ...
 _cards_classes = [ FakeMagicSim, SuperSim, MagicSim, GrcardSim,
 		   SysmoSIMgr1, SysmoSIMgr2, SysmoUSIMgr1, SysmoUSIMSJS1,
-		   FairwavesSIM, OpenCellsSim, WavemobileSim ]
+		   FairwavesSIM, OpenCellsSim, WavemobileSim, SysmoISIMSJA2 ]
 
 def card_autodetect(scc):
 	for kls in _cards_classes:
