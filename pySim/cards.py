@@ -1315,13 +1315,12 @@ class SmartjacSimV2(Card):
 
 		# Set the Ki using proprietary command
 		r = self._scc.select_file(['3f00', '7fff'])
-		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "0902" + "02" + self._EF_num['Ki'])
+		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "090c" + "02" + self._EF_num['Ki'])
 		data, sw = self._scc._tp.send_apdu(self.APDU_UPDATE_KI_OPC_PREFIX + p['ki'] + self.pad_crc(
 			format(libscrc.ccitt_false(p['ki'].decode("hex")), 'x')))
 
 		# Set the OPc using proprietary command
-		r = self._scc.select_file(['3f00', '7fff'])
-		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "0902" + "02" + self._EF_num['OPc'])
+		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "090c" + "02" + self._EF_num['OPc'])
 		data, sw = self._scc._tp.send_apdu(self.APDU_UPDATE_KI_OPC_INFIX + p['opc'] + self.pad_crc(
 			format(libscrc.ccitt_false(p['opc'].decode("hex")), 'x')) + self.APDU_UPDATE_KI_OPC_SUFFIX)
 
