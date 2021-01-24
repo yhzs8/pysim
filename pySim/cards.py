@@ -1208,15 +1208,28 @@ class SmartjacSimV1(Card):
 		self.select_aid_and_verify_keyset()
 
 		# EF.IMSI
-		r = self._scc.select_file(['3F00', '7FFF', '6F07'])
-		data, sw = self._scc.update_binary('6F07', enc_imsi(p['imsi']))
+		r = self._scc.select_file(['3f00', '7fff', '6f07'])
+		data, sw = self._scc.update_binary('6f07', enc_imsi(p['imsi']))
+
+		plmn = enc_plmn(p['mcc'], p['mnc'])
+
+		self.select_aid_and_verify_keyset()
+
+		# EF.PLMNwACT
+		r = self._scc.select_file(['3f00', '7fff', '6f60'])
+		self._scc.update_binary('6f60', plmn + 'ffff' + 'ffffff0000' * 7)
+
+		self.select_aid_and_verify_keyset()
+
+		# EF.OPLMNwACT
+		r = self._scc.select_file(['3f00', '7fff', '6f61'])
+		self._scc.update_binary('6f61', plmn + 'ffff' + 'ffffff0000' * 7)
 
 		self.select_aid_and_verify_keyset()
 
 		# EF.HPLMNwACT
 		r = self._scc.select_file(['3f00', '7fff', '6f62'])
-		hplmn = enc_plmn(p['mcc'], p['mnc'])
-		self._scc.update_binary('6f62', hplmn + 'ffff')
+		self._scc.update_binary('6f62', plmn + 'ffff')
 
 		self.select_aid_and_verify_keyset()
 
@@ -1229,6 +1242,12 @@ class SmartjacSimV1(Card):
 				raise RuntimeError("Update ki and opc failed at step 2 with error code " + sw)
 		else:
 			raise RuntimeError("Update ki and opc failed at step 1 with error code " + sw)
+
+		self.select_aid_and_verify_keyset()
+
+		# EF.SPN
+		r = self._scc.select_file(['3f00', '7fff', '6f46'])
+		self._scc.update_binary('6f46', rpad(enc_spn(p['name']), 32))
 
 class SmartjacSimV2(Card):
 	"""
@@ -1304,12 +1323,25 @@ class SmartjacSimV2(Card):
 		r = self._scc.select_file(['3f00', '7fff', '6f07'])
 		data, sw = self._scc.update_binary('6f07', enc_imsi(p['imsi']))
 
+		plmn = enc_plmn(p['mcc'], p['mnc'])
+
+		self.select_aid_and_verify_adm_keys()
+
+		# EF.PLMNwACT
+		r = self._scc.select_file(['3f00', '7fff', '6f60'])
+		self._scc.update_binary('6f60', plmn + 'ffff' + 'ffffff0000' * 7)
+
+		self.select_aid_and_verify_adm_keys()
+
+		# EF.OPLMNwACT
+		r = self._scc.select_file(['3f00', '7fff', '6f61'])
+		self._scc.update_binary('6f61', plmn + 'ffff' + 'ffffff0000' * 7)
+
 		self.select_aid_and_verify_adm_keys()
 
 		# EF.HPLMNwACT
 		r = self._scc.select_file(['3f00', '7fff', '6f62'])
-		hplmn = enc_plmn(p['mcc'], p['mnc'])
-		self._scc.update_binary('6f62', hplmn + 'ffff')
+		self._scc.update_binary('6f62', plmn + 'ffff')
 
 		self.select_aid_and_verify_adm_keys()
 
@@ -1323,6 +1355,12 @@ class SmartjacSimV2(Card):
 		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "090c" + "02" + self._EF_num['OPc'])
 		data, sw = self._scc._tp.send_apdu(self.APDU_UPDATE_KI_OPC_INFIX + p['opc'] + self.pad_crc(
 			format(libscrc.ccitt_false(p['opc'].decode("hex")), 'x')) + self.APDU_UPDATE_KI_OPC_SUFFIX)
+
+		self.select_aid_and_verify_adm_keys()
+
+		# EF.SPN
+		r = self._scc.select_file(['3f00', '7fff', '6f46'])
+		self._scc.update_binary('6f46', rpad(enc_spn(p['name']), 32))
 
 # In order for autodetection ...
 _cards_classes = [ FakeMagicSim, SuperSim, MagicSim, GrcardSim,
