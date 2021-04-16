@@ -1213,17 +1213,17 @@ class SmartjacSimV1(Card):
 
 		plmn = enc_plmn(p['mcc'], p['mnc'])
 
-		self.select_aid_and_verify_keyset()
+		#self.select_aid_and_verify_keyset()
 
 		# EF.PLMNwACT
-		r = self._scc.select_file(['3f00', '7fff', '6f60'])
-		self._scc.update_binary('6f60', plmn + 'ffff' + 'ffffff0000' * 7)
+		#r = self._scc.select_file(['3f00', '7fff', '6f60'])
+		#self._scc.update_binary('6f60', plmn + 'ffff' + 'ffffff0000' * 7)
 
-		self.select_aid_and_verify_keyset()
+		#self.select_aid_and_verify_keyset()
 
 		# EF.OPLMNwACT
-		r = self._scc.select_file(['3f00', '7fff', '6f61'])
-		self._scc.update_binary('6f61', plmn + 'ffff' + 'ffffff0000' * 7)
+		#r = self._scc.select_file(['3f00', '7fff', '6f61'])
+		#self._scc.update_binary('6f61', plmn + 'ffff' + 'ffffff0000' * 7)
 
 		self.select_aid_and_verify_keyset()
 
@@ -1231,6 +1231,14 @@ class SmartjacSimV1(Card):
 		r = self._scc.select_file(['3f00', '7fff', '6f62'])
 		self._scc.update_binary('6f62', plmn + 'ffff')
 
+		self.select_aid_and_verify_adm_keys()
+
+		# EF.AD
+		if p.get('mcc') and p.get('mnc'):
+			sw = self.update_ad(p['mnc'])
+			if sw != '9000':
+				print("Programming AD failed with code %s"%sw)
+				
 		self.select_aid_and_verify_keyset()
 
 		# Set the Ki and OPc using proprietary command
@@ -1325,17 +1333,17 @@ class SmartjacSimV2(Card):
 
 		plmn = enc_plmn(p['mcc'], p['mnc'])
 
-		self.select_aid_and_verify_adm_keys()
+		#self.select_aid_and_verify_adm_keys()
 
 		# EF.PLMNwACT
-		r = self._scc.select_file(['3f00', '7fff', '6f60'])
-		self._scc.update_binary('6f60', plmn + 'ffff' + 'ffffff0000' * 7)
+		#r = self._scc.select_file(['3f00', '7fff', '6f60'])
+		#self._scc.update_binary('6f60', plmn + 'ffff' + 'ffffff0000' * 7)
 
-		self.select_aid_and_verify_adm_keys()
+		#self.select_aid_and_verify_adm_keys()
 
 		# EF.OPLMNwACT
-		r = self._scc.select_file(['3f00', '7fff', '6f61'])
-		self._scc.update_binary('6f61', plmn + 'ffff' + 'ffffff0000' * 7)
+		#r = self._scc.select_file(['3f00', '7fff', '6f61'])
+		#self._scc.update_binary('6f61', plmn + 'ffff' + 'ffffff0000' * 7)
 
 		self.select_aid_and_verify_adm_keys()
 
@@ -1345,6 +1353,14 @@ class SmartjacSimV2(Card):
 
 		self.select_aid_and_verify_adm_keys()
 
+		# EF.AD
+		if p.get('mcc') and p.get('mnc'):
+			sw = self.update_ad(p['mnc'])
+			if sw != '9000':
+				print("Programming AD failed with code %s"%sw)
+
+		self.select_aid_and_verify_adm_keys()
+				
 		# Set the Ki using proprietary command
 		r = self._scc.select_file(['3f00', '7fff'])
 		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "090c" + "02" + self._EF_num['Ki'])
