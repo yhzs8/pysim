@@ -1231,7 +1231,7 @@ class SmartjacSimV1(Card):
 		r = self._scc.select_file(['3f00', '7fff', '6f62'])
 		self._scc.update_binary('6f62', plmn + 'ffff')
 
-		self.select_aid_and_verify_adm_keys()
+		self.select_aid_and_verify_keyset()
 
 		# EF.AD
 		if p.get('mcc') and p.get('mnc'):
