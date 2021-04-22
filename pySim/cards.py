@@ -1157,12 +1157,12 @@ class SysmoISIMSJA2(Card):
 
 		return
 
-class SmartjacSimV1(Card):
+class SjSimV1(Card):
 	"""
-	Smartjac V1
+	SJ V1
 	"""
 
-	name = 'smartjacV1'
+	name = 'sjV1'
 
 	APDU_KEYSET_PREFIX = "F02A000F08"
 	APDU_UPDATE_KI_OPC_PREFIX = "80D810803C104E10"
@@ -1257,12 +1257,12 @@ class SmartjacSimV1(Card):
 		r = self._scc.select_file(['3f00', '7fff', '6f46'])
 		self._scc.update_binary('6f46', rpad(enc_spn(p['name']), 32))
 
-class SmartjacSimV2(Card):
+class SjSimV2(Card):
 	"""
-	Smartjac V2
+	SJ V2
 	"""
 
-	name = 'smartjacV2'
+	name = 'sjV2'
 	# Propriatary files
 	_EF_num = {
 		'Ki': '6ffc',
@@ -1378,10 +1378,131 @@ class SmartjacSimV2(Card):
 		r = self._scc.select_file(['3f00', '7fff', '6f46'])
 		self._scc.update_binary('6f46', rpad(enc_spn(p['name']), 32))
 
+class SjSIM3(Card):
+	"""
+	SJ V3
+	"""
+
+	name = 'sjV3'
+	# Propriatary files
+	_EF_num = {
+		'Ki': '62fc',
+		'OPc': '62fd',
+	}
+
+	APDU_UPDATE_KI_OPC_PREFIX = "00d6000012"
+	APDU_UPDATE_KI_OPC_INFIX = "00d600006801"
+	APDU_UPDATE_KI_OPC_SUFFIX = "40002040600000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000020000000000000000000000000000000400000000000000000000000000000008"
+
+	def __init__(self, ssc):
+		super(SmartjacSimV2, self).__init__(ssc)
+		self._adm_chv_num = 0xa
+		self._adm2_chv_num = 0xb
+		self._scc.cla_byte = "00"
+		self._scc.sel_ctrl = "0004"  # request an FCP
+
+	@classmethod
+	def autodetect(kls, scc):
+		try:
+			# Look for ATR
+			if scc.get_atr() == toBytes("3B 9F 96 80 1F C7 80 31 E0 73 FE 21 1B 64 41 63 94 00 82 90 00 77"):
+				return kls(scc)
+		except:
+			return None
+		return None
+
+	def pad_crc(self, crc):
+		if len(crc) == 3:
+			return '0' + crc
+		return crc
+
+	def verify_adm2(self, key):
+		'''
+		Authenticate with ADM2 key.
+
+		Fairwaves SIM cards support hierarchical key structure and ADM2 key
+		is a key which has access to proprietary files (Ki and OP/OPC).
+		That said, ADM key inherits permissions of ADM2 key and thus we rarely
+		need ADM2 key per se.
+		'''
+		(res, sw) = self._scc.verify_chv(self._adm2_chv_num, key)
+		return sw
+
+	def select_aid_and_verify_adm_keys(self):
+		# AID selection
+		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "040c" + '0c' + 'a0000000871002ffffffff89')
+
+		# Authenticate using ADM1
+		pin = h2b("3131313131313131")
+		sw = self.verify_adm(pin)
+		if sw != '9000':
+			raise RuntimeError('Failed to authenticate with ADM1 key')
+
+		# Authenticate using ADM2
+		pin2 = h2b("3232323232323232")
+		sw = self.verify_adm2(pin2)
+		if sw != '9000':
+			raise RuntimeError('Failed to authenticate with ADM2 key')
+
+	def program(self, p):
+
+		self.select_aid_and_verify_adm_keys()
+
+		# EF.IMSI
+		r = self._scc.select_file(['3f00', '7fff', '6f07'])
+		data, sw = self._scc.update_binary('6f07', enc_imsi(p['imsi']))
+
+		plmn = enc_plmn(p['mcc'], p['mnc'])
+
+		# self.select_aid_and_verify_adm_keys()
+
+		# EF.PLMNwACT
+		# r = self._scc.select_file(['3f00', '7fff', '6f60'])
+		# self._scc.update_binary('6f60', plmn + 'ffff' + 'ffffff0000' * 7)
+
+		# self.select_aid_and_verify_adm_keys()
+
+		# EF.OPLMNwACT
+		# r = self._scc.select_file(['3f00', '7fff', '6f61'])
+		# self._scc.update_binary('6f61', plmn + 'ffff' + 'ffffff0000' * 7)
+
+		self.select_aid_and_verify_adm_keys()
+
+		# EF.HPLMNwACT
+		r = self._scc.select_file(['3f00', '7fff', '6f62'])
+		self._scc.update_binary('6f62', plmn + 'ffff')
+
+		self.select_aid_and_verify_adm_keys()
+
+		# EF.AD
+		if p.get('mcc') and p.get('mnc'):
+			sw = self.update_ad(p['mnc'])
+			if sw != '9000':
+				print("Programming AD failed with code %s" % sw)
+
+		self.select_aid_and_verify_adm_keys()
+
+		# Set the Ki using proprietary command
+		r = self._scc.select_file(['3f00', '7fff'])
+		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "090c" + "02" + self._EF_num['Ki'])
+		data, sw = self._scc._tp.send_apdu(self.APDU_UPDATE_KI_OPC_PREFIX + p['ki'] + self.pad_crc(
+			format(libscrc.ccitt_false(p['ki'].decode("hex")), 'x')))
+
+		# Set the OPc using proprietary command
+		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "090c" + "02" + self._EF_num['OPc'])
+		data, sw = self._scc._tp.send_apdu(self.APDU_UPDATE_KI_OPC_INFIX + p['opc'] + self.pad_crc(
+			format(libscrc.ccitt_false(p['opc'].decode("hex")), 'x')) + self.APDU_UPDATE_KI_OPC_SUFFIX)
+
+		self.select_aid_and_verify_adm_keys()
+
+		# EF.SPN
+		r = self._scc.select_file(['3f00', '7fff', '6f46'])
+		self._scc.update_binary('6f46', rpad(enc_spn(p['name']), 32))
+		
 # In order for autodetection ...
 _cards_classes = [ FakeMagicSim, SuperSim, MagicSim, GrcardSim,
 		   SysmoSIMgr1, SysmoSIMgr2, SysmoUSIMgr1, SysmoUSIMSJS1,
-		   FairwavesSIM, OpenCellsSim, WavemobileSim, SysmoISIMSJA2, SmartjacSimV1, SmartjacSimV2 ]
+		   FairwavesSIM, OpenCellsSim, WavemobileSim, SysmoISIMSJA2, SjSimV1, SjSimV2, SjSimV3 ]
 
 def card_autodetect(scc):
     for kls in _cards_classes:
