@@ -1170,7 +1170,7 @@ class SjSimV1(Card):
 	APDU_UPDATE_KI_OPC_SUFFIX = "00"
 
 	def __init__(self, ssc):
-		super(SmartjacSimV1, self).__init__(ssc)
+		super(SjSimV1, self).__init__(ssc)
 		self._scc.cla_byte = "00"
 		self._scc.sel_ctrl = "0004"  # request an FCP
 
@@ -1274,7 +1274,7 @@ class SjSimV2(Card):
 	APDU_UPDATE_KI_OPC_SUFFIX = "40002040600000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000020000000000000000000000000000000400000000000000000000000000000008"
 
 	def __init__(self, ssc):
-		super(SmartjacSimV2, self).__init__(ssc)
+		super(SjSimV2, self).__init__(ssc)
 		self._adm_chv_num = 0xa
 		self._adm2_chv_num = 0xb
 		self._scc.cla_byte = "00"
@@ -1395,7 +1395,7 @@ class SjSimV3(Card):
 	APDU_UPDATE_KI_OPC_SUFFIX = "40002040600000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000020000000000000000000000000000000400000000000000000000000000000008"
 
 	def __init__(self, ssc):
-		super(SmartjacSimV2, self).__init__(ssc)
+		super(SjSimV3, self).__init__(ssc)
 		self._adm_chv_num = 0xa
 		self._adm2_chv_num = 0xb
 		self._scc.cla_byte = "00"
