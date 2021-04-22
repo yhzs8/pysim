@@ -1378,7 +1378,7 @@ class SjSimV2(Card):
 		r = self._scc.select_file(['3f00', '7fff', '6f46'])
 		self._scc.update_binary('6f46', rpad(enc_spn(p['name']), 32))
 
-class SjSIM3(Card):
+class SjSimV3(Card):
 	"""
 	SJ V3
 	"""
