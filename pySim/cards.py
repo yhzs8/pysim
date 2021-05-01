@@ -1191,13 +1191,17 @@ class SjSimV1(Card):
 		(res, sw) = self._scc._tp.send_apdu(self.APDU_KEYSET_PREFIX + key)
 		return sw
 
-	def select_aid_and_verify_keyset(self):
+	def select_aid(self):
 		'''
-		Select AID and Authenticate with keyset.
+		Select AID
 		'''
 		data, sw = self._scc._tp.send_apdu(
 			self._scc.cla_byte + "a4" + "040c" + '10' + 'A0000000871002FF47F00189000001FF')
 
+	def verify_keyset(self):
+		'''
+		Authenticate with keyset.
+		'''
 		# Authenticate using Keyset
 		key = "0000000000000000"
 		sw = self.verify_keyset(key)
@@ -1205,7 +1209,8 @@ class SjSimV1(Card):
 			raise RuntimeError('Failed to authenticate with Keyset')
 
 	def program(self, p):
-		self.select_aid_and_verify_keyset()
+		self.select_aid()
+		self.verify_keyset()
 
 		# EF.IMSI
 		if p.get('imsi'):
@@ -1213,23 +1218,17 @@ class SjSimV1(Card):
 			if sw != '9000':
 				print("Programming IMSI failed with code %s"%sw)
 
-		self.select_aid_and_verify_keyset()
-
 		# EF.HPLMNwACT
 		if p.get('mcc') and p.get('mnc'):
 			sw = self.update_hplmn_act(p['mcc'], p['mnc'])
 			if sw != '9000':
 				print("Programming HPLMNwAcT failed with code %s"%sw)
 
-		self.select_aid_and_verify_keyset()
-
 		# EF.AD
 		if p.get('mcc') and p.get('mnc'):
 			sw = self.update_ad(p['mnc'])
 			if sw != '9000':
 				print("Programming AD failed with code %s"%sw)
-				
-		self.select_aid_and_verify_keyset()
 
 		# Set the Ki and OPc using proprietary command
 		r = self._scc.select_file(['3f00', '7fff'])
@@ -1240,8 +1239,6 @@ class SjSimV1(Card):
 				raise RuntimeError("Update ki and opc failed at step 2 with error code " + sw)
 		else:
 			raise RuntimeError("Update ki and opc failed at step 1 with error code " + sw)
-
-		self.select_aid_and_verify_keyset()
 
 		# EF.SPN
 		if p.get('name'):
@@ -1299,11 +1296,16 @@ class SjSimV2(Card):
 		(res, sw) = self._scc.verify_chv(self._adm2_chv_num, key)
 		return sw
 
-	def select_aid_and_verify_adm_keys(self):
-		# AID selection
+	def select_aid(self):
+		'''
+		Select AID
+		'''
 		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "040c" + '0c' + 'a0000000871002ffffffff89')
 
-		# Authenticate using ADM1
+	def verify_adm_keys(self):
+		'''
+		Authenticate with ADM keys.
+		'''
 		pin = h2b("3131313131313131")
 		sw = self.verify_adm(pin)
 		if sw != '9000':
@@ -1316,8 +1318,8 @@ class SjSimV2(Card):
 			raise RuntimeError('Failed to authenticate with ADM2 key')
 
 	def program(self, p):
-
-		self.select_aid_and_verify_adm_keys()
+		self.select_aid()
+		self.verify_adm_keys()
 
 		# EF.IMSI
 		if p.get('imsi'):
@@ -1325,23 +1327,17 @@ class SjSimV2(Card):
 			if sw != '9000':
 				print("Programming IMSI failed with code %s"%sw)
 
-		self.select_aid_and_verify_adm_keys()
-
 		# EF.HPLMNwACT
 		if p.get('mcc') and p.get('mnc'):
 			sw = self.update_hplmn_act(p['mcc'], p['mnc'])
 			if sw != '9000':
 				print("Programming HPLMNwAcT failed with code %s"%sw)
 
-		self.select_aid_and_verify_adm_keys()
-
 		# EF.AD
 		if p.get('mcc') and p.get('mnc'):
 			sw = self.update_ad(p['mnc'])
 			if sw != '9000':
 				print("Programming AD failed with code %s"%sw)
-
-		self.select_aid_and_verify_adm_keys()
 				
 		# Set the Ki using proprietary command
 		r = self._scc.select_file(['3f00', '7fff'])
@@ -1353,8 +1349,6 @@ class SjSimV2(Card):
 		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "090c" + "02" + self._EF_num['OPc'])
 		data, sw = self._scc._tp.send_apdu(self.APDU_UPDATE_KI_OPC_INFIX + p['opc'] + self.pad_crc(
 			format(libscrc.ccitt_false(p['opc'].decode("hex")), 'x')) + self.APDU_UPDATE_KI_OPC_SUFFIX)
-
-		self.select_aid_and_verify_adm_keys()
 
 		# EF.SPN
 		if p.get('name'):
@@ -1412,11 +1406,17 @@ class SjSimV3(Card):
 		(res, sw) = self._scc.verify_chv(self._adm2_chv_num, key)
 		return sw
 
-	def select_aid_and_verify_adm_keys(self):
+	def select_aid(self):
+		'''
+		Select AID
+		'''
 		# AID selection
 		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "040c" + '0c' + 'a0000000871002ffffffff89')
 
-		# Authenticate using ADM1
+	def verify_adm_keys(self):
+		'''
+		Authenticate with ADM keys.
+		'''
 		pin = h2b("3131313131313131")
 		sw = self.verify_adm(pin)
 		if sw != '9000':
@@ -1429,8 +1429,8 @@ class SjSimV3(Card):
 			raise RuntimeError('Failed to authenticate with ADM2 key')
 
 	def program(self, p):
-
-		self.select_aid_and_verify_adm_keys()
+		self.select_aid()
+		self.verify_adm_keys()
 
 		# EF.IMSI
 		if p.get('imsi'):
@@ -1438,23 +1438,17 @@ class SjSimV3(Card):
 			if sw != '9000':
 				print("Programming IMSI failed with code %s"%sw)
 
-		self.select_aid_and_verify_adm_keys()
-
 		# EF.HPLMNwACT
 		if p.get('mcc') and p.get('mnc'):
 			sw = self.update_hplmn_act(p['mcc'], p['mnc'])
 			if sw != '9000':
 				print("Programming HPLMNwAcT failed with code %s"%sw)
 
-		self.select_aid_and_verify_adm_keys()
-
 		# EF.AD
 		if p.get('mcc') and p.get('mnc'):
 			sw = self.update_ad(p['mnc'])
 			if sw != '9000':
 				print("Programming AD failed with code %s" % sw)
-
-		self.select_aid_and_verify_adm_keys()
 
 		# Set the Ki using proprietary command
 		r = self._scc.select_file(['3f00', '7fff'])
@@ -1466,8 +1460,6 @@ class SjSimV3(Card):
 		data, sw = self._scc._tp.send_apdu(self._scc.cla_byte + "a4" + "090c" + "02" + self._EF_num['OPc'])
 		data, sw = self._scc._tp.send_apdu(self.APDU_UPDATE_KI_OPC_INFIX + p['opc'] + self.pad_crc(
 			format(libscrc.xmodem(p['opc'].decode("hex")), 'x')) + self.APDU_UPDATE_KI_OPC_SUFFIX)
-
-		self.select_aid_and_verify_adm_keys()
 
 		# EF.SPN
 		if p.get('name'):
