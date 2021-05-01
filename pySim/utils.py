@@ -148,6 +148,7 @@ def dec_act(twohexbytes):
 	act_list = [
 		{'bit': 15, 'name': "UTRAN"},
 		{'bit': 14, 'name': "E-UTRAN"},
+		{'bit': 10, 'name': "NG-RAN"},
 		{'bit':  7, 'name': "GSM"},
 		{'bit':  6, 'name': "GSM COMPACT"},
 		{'bit':  5, 'name': "cdma2000 HRPD"},
@@ -179,7 +180,7 @@ def format_xplmn_w_act(hexstr):
 		if rec_info['mcc'] == 0xFFF and rec_info['mnc'] == 0xFFF:
 			rec_str = "unused"
 		else:
-			rec_str = "MCC: %03d MNC: %03d AcT: %s" % (rec_info['mcc'], rec_info['mnc'], ", ".join(rec_info['act']))
+			rec_str = "MCC: %03d MNC: %d AcT: %s" % (rec_info['mcc'], rec_info['mnc'], ", ".join(rec_info['act']))
 		s += "\t%s # %s\n" % (rec_data, rec_str)
 	return s
 
