@@ -1208,28 +1208,18 @@ class SjSimV1(Card):
 		self.select_aid_and_verify_keyset()
 
 		# EF.IMSI
-		r = self._scc.select_file(['3f00', '7fff', '6f07'])
-		data, sw = self._scc.update_binary('6f07', enc_imsi(p['imsi']))
-
-		plmn = enc_plmn(p['mcc'], p['mnc'])
-
-		#self.select_aid_and_verify_keyset()
-
-		# EF.PLMNwACT
-		#r = self._scc.select_file(['3f00', '7fff', '6f60'])
-		#self._scc.update_binary('6f60', plmn + 'ffff' + 'ffffff0000' * 7)
-
-		#self.select_aid_and_verify_keyset()
-
-		# EF.OPLMNwACT
-		#r = self._scc.select_file(['3f00', '7fff', '6f61'])
-		#self._scc.update_binary('6f61', plmn + 'ffff' + 'ffffff0000' * 7)
+		if p.get('imsi'):
+			sw = self.update_imsi(p['imsi'])
+			if sw != '9000':
+				print("Programming IMSI failed with code %s"%sw)
 
 		self.select_aid_and_verify_keyset()
 
 		# EF.HPLMNwACT
-		r = self._scc.select_file(['3f00', '7fff', '6f62'])
-		self._scc.update_binary('6f62', plmn + 'ffff')
+		if p.get('mcc') and p.get('mnc'):
+			sw = self.update_hplmn_act(p['mcc'], p['mnc'])
+			if sw != '9000':
+				print("Programming HPLMNwAcT failed with code %s"%sw)
 
 		self.select_aid_and_verify_keyset()
 
@@ -1254,8 +1244,10 @@ class SjSimV1(Card):
 		self.select_aid_and_verify_keyset()
 
 		# EF.SPN
-		r = self._scc.select_file(['3f00', '7fff', '6f46'])
-		self._scc.update_binary('6f46', rpad(enc_spn(p['name']), 32))
+		if p.get('name'):
+			sw = self.update_spn(p['name'])
+			if sw != '9000':
+				print("Programming SPN failed with code %s"%sw)
 
 class SjSimV2(Card):
 	"""
@@ -1267,7 +1259,7 @@ class SjSimV2(Card):
 	_EF_num = {
 		'Ki': '6ffc',
 		'OPc': '6ffd',
-    }
+	}
 
 	APDU_UPDATE_KI_OPC_PREFIX = "00d6000012"
 	APDU_UPDATE_KI_OPC_INFIX = "00d600006801"
@@ -1328,28 +1320,18 @@ class SjSimV2(Card):
 		self.select_aid_and_verify_adm_keys()
 
 		# EF.IMSI
-		r = self._scc.select_file(['3f00', '7fff', '6f07'])
-		data, sw = self._scc.update_binary('6f07', enc_imsi(p['imsi']))
-
-		plmn = enc_plmn(p['mcc'], p['mnc'])
-
-		#self.select_aid_and_verify_adm_keys()
-
-		# EF.PLMNwACT
-		#r = self._scc.select_file(['3f00', '7fff', '6f60'])
-		#self._scc.update_binary('6f60', plmn + 'ffff' + 'ffffff0000' * 7)
-
-		#self.select_aid_and_verify_adm_keys()
-
-		# EF.OPLMNwACT
-		#r = self._scc.select_file(['3f00', '7fff', '6f61'])
-		#self._scc.update_binary('6f61', plmn + 'ffff' + 'ffffff0000' * 7)
+		if p.get('imsi'):
+			sw = self.update_imsi(p['imsi'])
+			if sw != '9000':
+				print("Programming IMSI failed with code %s"%sw)
 
 		self.select_aid_and_verify_adm_keys()
 
 		# EF.HPLMNwACT
-		r = self._scc.select_file(['3f00', '7fff', '6f62'])
-		self._scc.update_binary('6f62', plmn + 'ffff')
+		if p.get('mcc') and p.get('mnc'):
+			sw = self.update_hplmn_act(p['mcc'], p['mnc'])
+			if sw != '9000':
+				print("Programming HPLMNwAcT failed with code %s"%sw)
 
 		self.select_aid_and_verify_adm_keys()
 
@@ -1375,8 +1357,10 @@ class SjSimV2(Card):
 		self.select_aid_and_verify_adm_keys()
 
 		# EF.SPN
-		r = self._scc.select_file(['3f00', '7fff', '6f46'])
-		self._scc.update_binary('6f46', rpad(enc_spn(p['name']), 32))
+		if p.get('name'):
+			sw = self.update_spn(p['name'])
+			if sw != '9000':
+				print("Programming SPN failed with code %s"%sw)
 
 class SjSimV3(Card):
 	"""
@@ -1449,28 +1433,18 @@ class SjSimV3(Card):
 		self.select_aid_and_verify_adm_keys()
 
 		# EF.IMSI
-		r = self._scc.select_file(['3f00', '7fff', '6f07'])
-		data, sw = self._scc.update_binary('6f07', enc_imsi(p['imsi']))
-
-		plmn = enc_plmn(p['mcc'], p['mnc'])
-
-		# self.select_aid_and_verify_adm_keys()
-
-		# EF.PLMNwACT
-		# r = self._scc.select_file(['3f00', '7fff', '6f60'])
-		# self._scc.update_binary('6f60', plmn + 'ffff' + 'ffffff0000' * 7)
-
-		# self.select_aid_and_verify_adm_keys()
-
-		# EF.OPLMNwACT
-		# r = self._scc.select_file(['3f00', '7fff', '6f61'])
-		# self._scc.update_binary('6f61', plmn + 'ffff' + 'ffffff0000' * 7)
+		if p.get('imsi'):
+			sw = self.update_imsi(p['imsi'])
+			if sw != '9000':
+				print("Programming IMSI failed with code %s"%sw)
 
 		self.select_aid_and_verify_adm_keys()
 
 		# EF.HPLMNwACT
-		r = self._scc.select_file(['3f00', '7fff', '6f62'])
-		self._scc.update_binary('6f62', plmn + 'ffff')
+		if p.get('mcc') and p.get('mnc'):
+			sw = self.update_hplmn_act(p['mcc'], p['mnc'])
+			if sw != '9000':
+				print("Programming HPLMNwAcT failed with code %s"%sw)
 
 		self.select_aid_and_verify_adm_keys()
 
@@ -1496,8 +1470,10 @@ class SjSimV3(Card):
 		self.select_aid_and_verify_adm_keys()
 
 		# EF.SPN
-		r = self._scc.select_file(['3f00', '7fff', '6f46'])
-		self._scc.update_binary('6f46', rpad(enc_spn(p['name']), 32))
+		if p.get('name'):
+			sw = self.update_spn(p['name'])
+			if sw != '9000':
+				print("Programming SPN failed with code %s"%sw)
 		
 # In order for autodetection ...
 _cards_classes = [ FakeMagicSim, SuperSim, MagicSim, GrcardSim,
@@ -1505,9 +1481,9 @@ _cards_classes = [ FakeMagicSim, SuperSim, MagicSim, GrcardSim,
 		   FairwavesSIM, OpenCellsSim, WavemobileSim, SysmoISIMSJA2, SjSimV1, SjSimV2, SjSimV3 ]
 
 def card_autodetect(scc):
-    for kls in _cards_classes:
-        card = kls.autodetect(scc)
-        if card is not None:
+	for kls in _cards_classes:
+		card = kls.autodetect(scc)
+		if card is not None:
 			card.reset()
 			return card
 	return None
